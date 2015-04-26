@@ -12,7 +12,7 @@ from sqlparse.tokens import Keyword, Whitespace
 
 
 def getlimit(stream):
-    """Function that return the LIMIT of a input SQL """
+    """Function that returns the LIMIT of an input SQL """
     pipe = Pipeline()
 
     pipe.append(Limit())
@@ -25,7 +25,7 @@ def getlimit(stream):
 
 
 def getcolumns(stream):
-    """Function that return the colums of a SELECT query"""
+    """Function that returns the columns of a SELECT query"""
     pipe = Pipeline()
 
     pipe.append(ColumnsSelect())
