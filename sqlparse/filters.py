@@ -522,15 +522,20 @@ class InfoCreateTable(object):
     def process(self, stack, stream):
         class St:
             create = 0
-            table = 1
-            table_name = 2
-            create_table_open_paren = 3
-            column_name = 4
-            column_type = 5
-            column_ignore_rest = 6
-            ignore_rest = 7
-            finished = 8
-            ignore_remaining_statement = 9
+            table = 10
+            table_name_or_if_not_exists1 = 20 # table name or IF
+            if_not_exists2 = 21, # NOT
+            if_not_exists3 = 22, # EXISTS
+            table_name_rest = 23, # remainder of table name (after dot)
+            table_name_only = 24, # only table name allowed
+            create_table_open_paren_or_table_name_rest = 30
+            create_table_open_paren = 31
+            column_name = 40
+            column_type = 50
+            column_ignore_rest = 60
+            ignore_rest = 70
+            finished = 80
+            ignore_remaining_statement = 90
 
         state = St.create
         error = ''
@@ -554,24 +559,53 @@ class InfoCreateTable(object):
                     error = 'Not a CREATE statement'
             elif state == St.table:
                 if token_type in Keyword and value.upper() == 'TABLE':
-                    state = St.table_name
+                    state = St.table_name_or_if_not_exists1
                 else:
                     error = 'Not a CREATE TABLE statement'
-            elif state == St.table_name:
+            elif state == St.table_name_only:
                 if token_type in Name:
-                    state = St.create_table_open_paren
+                    state = St.create_table_open_paren_or_table_name_rest
                     table_name += value
                 else:
                     error = 'No table name given'
+            elif state == St.table_name_or_if_not_exists1:
+                if token_type in Name:
+                    state = St.create_table_open_paren_or_table_name_rest
+                    table_name += value
+                elif token_type in Keyword and value.upper() == 'IF':
+                    state = St.if_not_exists2
+                else:
+                    error = 'No table name given'
+            elif state == St.if_not_exists2:
+                if token_type in Keyword and value.upper() == 'NOT':
+                    state = St.if_not_exists3
+                else:
+                    error = 'Expected NOT in IF NOT EXISTS expression'
+            elif state == St.if_not_exists3:
+                if token_type in Keyword and value.upper() == 'EXISTS':
+                    state = St.table_name_only
+                else:
+                    error = 'Expected EXISTS in IF NOT EXISTS expression'
+            elif state == St.table_name_rest:
+                if token_type in Name:
+                    table_name += value
+                    state = St.create_table_open_paren
+                else:
+                    error = 'Invalid table name remainder'
             elif state == St.create_table_open_paren:
+                if token_type in Punctuation and value == '(':
+                    state = St.column_name
+                else:
+                    error = 'No opening paren for CREATE TABLE'
+            elif state == St.create_table_open_paren_or_table_name_rest:
                 if token_type in Punctuation:
                     if value == '(':
                         state = St.column_name
                     elif value == '.':
                         table_name += '.'
-                        state = St.table_name
+                        state = St.table_name_rest
 
-                if state == St.create_table_open_paren:
+                if state == St.create_table_open_paren_or_table_name_rest:
                     error = 'No opening paren for CREATE TABLE'
             elif state == St.column_name:
                 if token_type in Name or (token_type in Keyword and value.lower() in InfoCreateTable.ALLOWED_KEYWORD_AS_NAME):

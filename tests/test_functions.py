@@ -243,6 +243,7 @@ class Test_GetCreateTableInfo(TestCase, TestCasePy27Features):
             FOREIGN KEY (b) REFERENCES other(id)
         )
     """
+    sql16 = 'CREATE TABLE IF NOT EXISTS t ( id INT PRIMARY KEY )'
 
     def test_get_create_table_info1(self):
         info = get_create_table_info(tokenize(self.sql1))
@@ -324,6 +325,13 @@ class Test_GetCreateTableInfo(TestCase, TestCasePy27Features):
         self.assertEqual(info, [('t', {
             0: ('a', 'TEXT', 'NOT NULL'),
             1: ('b', 'TEXT', 'NOT NULL'),
+        })])
+
+    def test_get_create_table_info16(self):
+        info = get_create_table_info(tokenize(self.sql16))
+
+        self.assertEqual(info, [('t', {
+            0: ('id', 'INT', None),
         })])
 
     def test_get_create_table_info_errors(self):
