@@ -517,6 +517,7 @@ class InfoCreateTable(object):
         'data',
         'source',
         'type',
+        'user',
     ))
 
     def process(self, stack, stream):
@@ -563,13 +564,13 @@ class InfoCreateTable(object):
                 else:
                     error = 'Not a CREATE TABLE statement'
             elif state == St.table_name_only:
-                if token_type in Name:
+                if token_type in Name or (token_type in Keyword and value.lower() in InfoCreateTable.ALLOWED_KEYWORD_AS_NAME):
                     state = St.create_table_open_paren_or_table_name_rest
                     table_name += value
                 else:
                     error = 'No table name given'
             elif state == St.table_name_or_if_not_exists1:
-                if token_type in Name:
+                if token_type in Name or (token_type in Keyword and value.upper() != 'IF' and value.lower() in InfoCreateTable.ALLOWED_KEYWORD_AS_NAME):
                     state = St.create_table_open_paren_or_table_name_rest
                     table_name += value
                 elif token_type in Keyword and value.upper() == 'IF':
